@@ -1,0 +1,6 @@
+downloads/
+lib/
+tools/
+dist/
+*.log
+*.user
