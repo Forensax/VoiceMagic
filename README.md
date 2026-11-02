@@ -2,6 +2,12 @@
 
 Windows 桌面工具，将整个微信的播放声音独立调节到 0–1000%。包含聊天语音、视频、提示音和通话声音；其他软件继续使用原有输出。
 
+[下载最新 EXE](https://github.com/Forensax/VoiceMagic/releases/latest/download/VoiceMagic.exe) · [全部版本与校验文件](https://github.com/Forensax/VoiceMagic/releases)
+
+![微信音量托盘面板，示意状态](docs/ui-volume-100.png)
+
+支持 Windows 10/11 x64，需要 .NET Framework 4.7.2 或以上及 VB-CABLE。首次安装虚拟声卡后按提示重启；已安装的用户可直接使用。
+
 ## 启动
 
 日常使用双击 `release/VoiceMagic.exe`。这是单文件分发版，包含运行依赖、音频路由工具和官方虚拟声卡安装文件，无需同时携带 DLL 或文件夹。
@@ -17,6 +23,8 @@ Windows 桌面工具，将整个微信的播放声音独立调节到 0–1000%�
 3. 单击托盘图标打开音量面板，打开「放大」开关，播放一条微信语音，从 200% 开始调节。
 
 安装程序是 VB-Audio 官方 VB-CABLE Pack45，构建时验证 SHA-256 和安装器签名。需要管理员授权的步骤仅为驱动安装。工具日常运行无需管理员权限。
+
+VB-CABLE 来自 [VB-Audio / www.vb-cable.com](https://www.vb-cable.com/)，属于 donationware，欢迎通过官方网站捐赠支持原作者。驱动保持官方原始文件，使用及专业部署条件以 [VB-Audio 官方许可](https://vb-audio.com/Services/licensing.htm)为准。
 
 ## 工作方式
 
