@@ -36,7 +36,7 @@ New-Item -ItemType Directory -Force 'dist/tools','dist/driver' | Out-Null
 Copy-Item 'tools/SoundVolumeView/*' 'dist/tools' -Recurse -Force
 Copy-Item 'tools/VBCable/*' 'dist/driver' -Recurse -Force
 Copy-Item 'README.md','THIRD_PARTY_NOTICES.md','LICENSE-NAudio.txt' 'dist' -Force
-& $compiler /nologo /codepage:65001 /target:exe /platform:x64 /out:dist\VoiceMagic.Tests.exe /reference:lib\NAudio.dll /reference:System.Core.dll src\AudioEngine.cs tests\AudioTests.cs
+& $compiler /nologo /codepage:65001 /target:exe /platform:x64 /out:dist\VoiceMagic.Tests.exe /reference:lib\NAudio.dll /reference:dist\VoiceMagic.exe /reference:System.Core.dll tests\AudioTests.cs
 if ($LASTEXITCODE -ne 0) { throw '验证程序编译失败' }
 & 'dist/VoiceMagic.Tests.exe'
 if ($LASTEXITCODE -ne 0) { throw '音频处理验证失败' }

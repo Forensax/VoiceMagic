@@ -14,6 +14,7 @@ namespace VoiceMagic
         public volatile float Gain = 2;
         public volatile bool Muted;
         public volatile float Peak;
+        public volatile float InputPeak;
         public volatile bool Limiting;
         public WaveFormat WaveFormat { get { return source.WaveFormat; } }
         public GainProvider(ISampleProvider source)
@@ -26,7 +27,7 @@ namespace VoiceMagic
         {
             int read = source.Read(buffer, offset, count), channels = WaveFormat.Channels;
             float target = Muted ? 0 : Math.Max(0, Math.Min(10, Gain));
-            float peak = 0; bool limiting = false;
+            float peak = 0, inputPeak = 0; bool limiting = false;
             for (int i = offset; i < offset + read; i += channels)
             {
                 currentGain = smoothing * currentGain + (1 - smoothing) * target;
@@ -36,6 +37,7 @@ namespace VoiceMagic
                     float sample = buffer[i + ch];
                     if (float.IsNaN(sample) || float.IsInfinity(sample)) sample = 0;
                     buffer[i + ch] = sample;
+                    inputPeak = Math.Max(inputPeak, Math.Abs(sample));
                     framePeak = Math.Max(framePeak, Math.Abs(sample * currentGain));
                 }
                 double needed = framePeak > .94 ? .94 / framePeak : 1;
@@ -48,7 +50,7 @@ namespace VoiceMagic
                     peak = Math.Max(peak, Math.Abs(value));
                 }
             }
-            Peak = peak; Limiting = limiting;
+            InputPeak = inputPeak; Peak = peak; Limiting = limiting;
             return read;
         }
     }
