@@ -5,3 +5,5 @@
 - **VB-CABLE Pack45** — VB-Audio / Vincent Burel，独立第三方驱动，遵守官方许可及使用条件：https://vb-audio.com/Cable/ 。完整原始文件与 readme 保留于 `dist/driver`。重新分发或商业使用前应核对 https://vb-audio.com/Services/licensing.htm 。
 
 构建脚本固定下载文件的 SHA-256。下载均来自各组件官方来源。
+
+- **Microsoft Fluent System Icons** — Microsoft Corporation，MIT。来源：https://github.com/microsoft/fluentui-system-icons 。使用 Regular 样式的 Chat、Speaker 2、Speaker Mute、Arrow Sync、Settings、Power；原始 SVG、转换后的 PNG 和多分辨率 ICO 保存在 `assets/icons`，许可全文见 `assets/icons/LICENSE-Fluent.txt`，构建时复制到分发目录。程序内嵌图标无需在线加载。

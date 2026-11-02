@@ -28,7 +28,9 @@ if ($driverSignature.Status -ne 'Valid') { throw '音频驱动安装程序签名
 Copy-Item 'downloads/naudio/lib/net35/NAudio.dll' 'lib/NAudio.dll' -Force
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
 if (!(Test-Path -LiteralPath $compiler)) { throw '需要 Windows 自带的 .NET Framework 4.x' }
-& $compiler /nologo /codepage:65001 /target:winexe /platform:x64 /optimize+ /out:dist\VoiceMagic.exe /win32manifest:src\app.manifest /reference:lib\NAudio.dll /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Core.dll src\AudioEngine.cs src\Program.cs
+$iconResources = Get-ChildItem assets/icons -File | Where-Object { $_.Extension -in '.png','.ico' } | ForEach-Object { '/resource:' + $_.FullName + ',VoiceMagic.Icons.' + $_.Name }
+$sourceFiles = Get-ChildItem src -Filter '*.cs' | ForEach-Object { $_.FullName }
+& $compiler /nologo /codepage:65001 /target:winexe /platform:x64 /optimize+ /out:dist\VoiceMagic.exe /win32manifest:src\app.manifest /win32icon:assets\icons\VoiceMagic.ico /reference:lib\NAudio.dll /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Core.dll $iconResources $sourceFiles
 if ($LASTEXITCODE -ne 0) { throw '程序编译失败' }
 Copy-Item 'lib/NAudio.dll' 'dist/NAudio.dll' -Force
 Copy-Item 'src/VoiceMagic.exe.config' 'dist/VoiceMagic.exe.config' -Force
@@ -36,8 +38,13 @@ New-Item -ItemType Directory -Force 'dist/tools','dist/driver' | Out-Null
 Copy-Item 'tools/SoundVolumeView/*' 'dist/tools' -Recurse -Force
 Copy-Item 'tools/VBCable/*' 'dist/driver' -Recurse -Force
 Copy-Item 'README.md','THIRD_PARTY_NOTICES.md','LICENSE-NAudio.txt' 'dist' -Force
+Copy-Item 'assets/icons/LICENSE-Fluent.txt' 'dist' -Force
 & $compiler /nologo /codepage:65001 /target:exe /platform:x64 /out:dist\VoiceMagic.Tests.exe /reference:lib\NAudio.dll /reference:dist\VoiceMagic.exe /reference:System.Core.dll tests\AudioTests.cs
 if ($LASTEXITCODE -ne 0) { throw '验证程序编译失败' }
 & 'dist/VoiceMagic.Tests.exe'
 if ($LASTEXITCODE -ne 0) { throw '音频处理验证失败' }
+& $compiler /nologo /codepage:65001 /target:exe /platform:x64 /out:dist\VoiceMagic.UiTests.exe /reference:lib\NAudio.dll /reference:dist\VoiceMagic.exe /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll tests\UiTests.cs
+if ($LASTEXITCODE -ne 0) { throw '界面验证程序编译失败' }
+& 'dist/VoiceMagic.UiTests.exe'
+if ($LASTEXITCODE -ne 0) { throw '界面布局验证失败' }
 Write-Host "已生成：$projectRoot\dist\VoiceMagic.exe"
