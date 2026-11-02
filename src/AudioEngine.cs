@@ -25,7 +25,7 @@ namespace VoiceMagic
         public int Read(float[] buffer, int offset, int count)
         {
             int read = source.Read(buffer, offset, count), channels = WaveFormat.Channels;
-            float target = Muted ? 0 : Math.Max(0, Math.Min(6, Gain));
+            float target = Muted ? 0 : Math.Max(0, Math.Min(10, Gain));
             float peak = 0; bool limiting = false;
             for (int i = offset; i < offset + read; i += channels)
             {

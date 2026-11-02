@@ -153,9 +153,9 @@ namespace VoiceMagic
             tabs.TabPages.Add(main); tabs.TabPages.Add(setup);
             status.SetBounds(20, 20, 426, 30); status.Text = "正在检查音频组件"; main.Controls.Add(status);
             value.SetBounds(20, 57, 420, 46); value.Font = new Font(Font.FontFamily, 24, FontStyle.Bold); main.Controls.Add(value);
-            slider.SetBounds(14, 110, 435, 45); slider.Minimum = 0; slider.Maximum = 600;
+            slider.SetBounds(14, 110, 435, 45); slider.Minimum = 0; slider.Maximum = 1000;
             slider.TickFrequency = 100; slider.SmallChange = 10; slider.LargeChange = 50;
-            slider.Value = Math.Max(0, Math.Min(600, settings.Percent));
+            slider.Value = Math.Max(0, Math.Min(1000, settings.Percent));
             slider.AccessibleName = "微信音量百分比"; main.Controls.Add(slider);
             slider.ValueChanged += delegate { UpdateGain(); };
             ButtonAt("100%", 20, 159, 80, main, delegate { slider.Value = 100; });

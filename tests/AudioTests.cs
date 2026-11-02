@@ -21,7 +21,11 @@ class AudioTests
             gain.Read(samples, 0, samples.Length);
             Check(Math.Abs(samples[samples.Length - 2] - .15f) < .001, "300% amplifies quiet audio");
             Check(Math.Abs(samples[samples.Length - 1] / samples[samples.Length - 2] + .5f) < .001, "stereo ratio preserved");
-            signal.Level = .9f; gain.Gain = 6; gain.Read(samples, 0, samples.Length);
+            gain.Gain = 10; gain.Read(samples, 0, samples.Length);
+            Check(Math.Abs(samples[samples.Length - 2] - .5f) < .001, "1000% amplifies quiet audio tenfold");
+            gain.Gain = 100; gain.Read(samples, 0, samples.Length);
+            Check(Math.Abs(samples[samples.Length - 2] - .5f) < .001, "gain above 1000% is capped");
+            signal.Level = .9f; gain.Gain = 10; gain.Read(samples, 0, samples.Length);
             Check(samples.All(x => Math.Abs(x) <= .94001f) && gain.Limiting, "limiter contains sudden peaks");
             gain.Muted = true; gain.Read(samples, 0, samples.Length);
             Check(Math.Abs(samples[samples.Length - 2]) < .00001f, "mute fades to silence");
