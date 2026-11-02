@@ -4,7 +4,11 @@ Windows 桌面工具，将整个微信的播放声音独立调节到 0–1000%�
 
 ## 启动
 
-双击项目根目录的 `启动微信音量.cmd`，或打开 `dist/VoiceMagic.exe`。
+日常使用双击 `release/VoiceMagic.exe`。这是单文件分发版，包含运行依赖、音频路由工具和官方虚拟声卡安装文件，无需同时携带 DLL 或文件夹。
+
+首次运行会将启动器保存到 `%LOCALAPPDATA%/VoiceMagic/VoiceMagic.exe`，并将运行组件释放到该目录下按程序包哈希区分的 `runtime` 子目录。以后移动或删除最初下载的 EXE，不影响已启用的开机启动。该步骤无需管理员权限；安装虚拟声卡仍需一次管理员授权。
+
+开发时也可使用项目根目录的 `启动微信音量.cmd` 或 `dist/VoiceMagic.exe`。
 
 首次使用：
 
@@ -34,7 +38,13 @@ Windows 桌面工具，将整个微信的播放声音独立调节到 0–1000%�
 
 设置入口为右下角齿轮，也可从托盘右键菜单打开。设置窗口独立于面板，关闭设置不会停止音频。设备选择会在放大运行时重新建立通道，并保留音量与静音状态。
 
-退出程序请使用托盘右键菜单「恢复并退出」。手动启动后先显示面板一次，仍需打开「放大」开关；不增加开机自启。设置与故障日志位于 `%LOCALAPPDATA%/VoiceMagic`。
+退出程序请使用托盘右键菜单「恢复并退出」。手动启动后先显示面板一次，仍需打开「放大」开关。设置与故障日志位于 `%LOCALAPPDATA%/VoiceMagic`。
+
+## 开机启动
+
+在设置中勾选「开机启动」，即可在当前用户登录 Windows 后静默驻留托盘，并按保存的音量、播放设备自动开启放大。取消勾选立即移除该启动项，默认关闭。
+
+开机启动使用当前用户的 Windows Run 项，不需要管理员权限。音频设备暂未就绪时在后台每 10 秒重试；不会自动弹出面板或安装窗口。重复的开机启动请求不会唤出已有面板。主动关闭放大后不会自动重新开启。
 
 ## 注意事项与排查
 
@@ -55,6 +65,14 @@ Windows 桌面工具，将整个微信的播放声音独立调节到 0–1000%�
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
 ```
 
+生成单文件分发 EXE：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1
+```
+
+产物为 `release/VoiceMagic.exe`，附带 `release/SHA256.txt`。程序包启动时会验证内嵌载荷 SHA-256，释放时限制所有路径留在专用运行目录内。打包不包含测试程序或界面验证图片。日常使用仍依赖 Windows 自带的 .NET Framework 4.7.2+。
+
 构建脚本通过本地 `http://127.0.0.1:10808` 代理下载官方依赖。直连可加 `-Proxy ''`。下载缓存、外部组件和生成目录不进入 Git。SoundVolumeView 上游 ZIP 更新后哈希会改变，须核实来源和新版本后手动更新校验值。
 
 构建自动验证实际增益、立体声比例、突发峰值保护、静音、0% 和异常采样，以及本机 Windows 音频设备枚举。首次安装驱动后还需播放微信语音，检查电平、独立放大和停止恢复；未完成该步骤时，不视为端到端声音验证通过。
@@ -62,6 +80,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
 `dist/VoiceMagic.Tests.exe --integration` 使用极低音量测试信号，实际经过 VB-CABLE、音频引擎和默认播放设备，验证两轮开启/停止及三倍增益。需要已安装 VB-CABLE。`--diagnose` 仅读取微信音频会话状态，不修改路由。
 
 `dist/VoiceMagic.UiTests.exe` 检查 100%、150%、200% 控件布局、1000% 文本显示和四种任务栏方向的定位，并在 `dist/qa` 生成真实 WinForms 控件的离屏渲染。`--lifecycle` 使用实际音频引擎检查面板收起/关闭、设置关闭时的后台存活，以及重新连接、停止恢复。生命周期检查不显示窗口或创建托盘图标。
+
+界面测试还在临时注册表键中验证开机启动的路径引用、启用和取消，不改动用户真实的 Run 项。`--startup-lifecycle` 检查静默启动、自动放大、后台驻留及主动停止。
 
 新界面使用 ApplicationContext 管理后台生命周期，浅灰面板、细滑块和线性图标参考 `docs/ui-reference.png`。Fluent 图标作为 PNG/ICO 嵌入程序，日常运行无需 Node.js；`scripts/prepare-icons.cjs` 仅用于开发时从原始官方 SVG 重建资源，需要 sharp。
 

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Win32;
 using VoiceMagic;
 
 class UiTests
@@ -26,6 +27,21 @@ class UiTests
     }
     static void Render()
     {
+        string registrationKey = @"Software\VoiceMagic\StartupTests\" + Guid.NewGuid().ToString("N");
+        try
+        {
+            using (var key = Registry.CurrentUser.CreateSubKey(registrationKey))
+            {
+                key.SetValue("Unrelated", "keep");
+                StartupManager.WriteRegistration(key, true, @"F:\我的 工具\VoiceMagic.exe");
+                Check((string)key.GetValue(StartupManager.ValueName) == "\"F:\\我的 工具\\VoiceMagic.exe\" --startup", "startup command quotes spaced and Unicode paths");
+                Check(key.GetValueKind(StartupManager.ValueName) == RegistryValueKind.String, "startup registration uses REG_SZ");
+                StartupManager.WriteRegistration(key, false, "unused");
+                StartupManager.WriteRegistration(key, false, "unused");
+                Check(key.GetValue(StartupManager.ValueName) == null && (string)key.GetValue("Unrelated") == "keep", "disabling startup removes only VoiceMagic registration");
+            }
+        }
+        finally { Registry.CurrentUser.DeleteSubKeyTree(registrationKey, false); }
         string folder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "qa"); Directory.CreateDirectory(folder);
         foreach (float scale in new[] { 1f, 1.5f, 2f })
             using (var panel = new VolumePopup())
@@ -54,6 +70,22 @@ class UiTests
         }
     }
     static int failure;
+    static async Task StartupLifecycle(VoiceMagicContext context, VolumePopup panel)
+    {
+        try
+        {
+            for (int i = 0; i < 100 && !context.Running; i++) await Task.Delay(100);
+            Check(context.Running, "startup mode automatically enables audio");
+            Check(!panel.Visible, "startup mode keeps popup hidden");
+            await Task.Delay(2300);
+            Check(context.Running && !panel.Visible, "startup remains in background after routing checks");
+            Check(await context.StopAsync(true), "startup mode can be stopped normally");
+            await Task.Delay(1100);
+            Check(!context.Running, "explicit stop prevents automatic re-enabling");
+        }
+        catch (Exception ex) { Console.Error.WriteLine(ex); failure = 1; }
+        await context.ExitAsync();
+    }
     static async Task Lifecycle(VoiceMagicContext context, VolumePopup panel)
     {
         int savedPercent = context.State.Percent;
@@ -83,15 +115,16 @@ class UiTests
         {
             Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
             SynchronizationContext.SetSynchronizationContext(new WindowsFormsSynchronizationContext());
-            if (!args.Contains("--lifecycle")) { Render(); return 0; }
+            bool startupMode = args.Contains("--startup-lifecycle");
+            if (!args.Contains("--lifecycle") && !startupMode) { Render(); return 0; }
             using (var show = new EventWaitHandle(false, EventResetMode.AutoReset))
             using (var restore = new EventWaitHandle(false, EventResetMode.AutoReset))
             using (var panel = new VolumePopup())
-            using (var context = new VoiceMagicContext(show, restore, panel, false))
+            using (var context = new VoiceMagicContext(show, restore, panel, false, startupMode))
             using (var dispatch = new Control())
             {
                 IntPtr handle = dispatch.Handle;
-                dispatch.BeginInvoke(new Action(async delegate { await Lifecycle(context, panel); }));
+                dispatch.BeginInvoke(new Action(async delegate { if (startupMode) await StartupLifecycle(context, panel); else await Lifecycle(context, panel); }));
                 Application.Run(context);
             }
             return failure;

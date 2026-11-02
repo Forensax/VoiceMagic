@@ -25,8 +25,8 @@ namespace VoiceMagic
         AudioEngine engine;
         RouteReport report = new RouteReport();
         string cableInput, cableOutput, actualOutput, status = "未开启";
-        bool busy, watcherStarted, exiting, exitRequested, savePending;
-        int ticks, gainChangedAt;
+        bool busy, watcherStarted, exiting, exitRequested, savePending, startupPending;
+        int ticks, gainChangedAt, startupTicks;
         public event Action Changed;
         public bool Running { get { return engine != null; } }
         public bool Busy { get { return busy; } }
@@ -52,9 +52,10 @@ namespace VoiceMagic
                     Muted = Running && engine.Gain.Muted, Status = text, Level = Running ? engine.Gain.Peak : 0 };
             }
         }
-        public VoiceMagicContext(EventWaitHandle show, EventWaitHandle reset, VolumePopup panel = null, bool desktopIntegration = true)
+        public VoiceMagicContext(EventWaitHandle show, EventWaitHandle reset, VolumePopup panel = null, bool desktopIntegration = true, bool startup = false)
         {
             this.desktopIntegration = desktopIntegration;
+            startupPending = startup;
             settings.Percent = Math.Max(0, Math.Min(1000, settings.Percent));
             IntPtr dispatchHandle = dispatcher.Handle;
             popup = panel ?? new VolumePopup();
@@ -78,7 +79,10 @@ namespace VoiceMagic
             showWait = ThreadPool.RegisterWaitForSingleObject(show, delegate { Dispatch(ShowPopup); }, null, -1, false);
             restoreWait = ThreadPool.RegisterWaitForSingleObject(reset, delegate { Dispatch(async delegate { await StopAsync(true); }); }, null, -1, false);
             timer.Interval = 250; timer.Tick += Tick; timer.Start(); Publish();
-            if (desktopIntegration) dispatcher.BeginInvoke(new Action(delegate { ShowPopup(); if (!Ready) OpenSettings(); }));
+            if (desktopIntegration || startup) dispatcher.BeginInvoke(new Action(async delegate {
+                if (startup) { if (Ready) await StartAsync(); }
+                else { ShowPopup(); if (!Ready) OpenSettings(); }
+            }));
         }
         void Dispatch(Action action)
         {
@@ -154,7 +158,7 @@ namespace VoiceMagic
             if (restart) { await StartAsync(); if (Running) engine.Gain.Muted = muted; }
             Publish();
         }
-        public async Task ToggleAsync() { if (!busy) { if (Running) await StopAsync(false); else await StartAsync(); } }
+        public async Task ToggleAsync() { startupPending = false; if (!busy) { if (Running) await StopAsync(false); else await StartAsync(); } }
         public async Task ReconnectAsync()
         {
             if (busy) return;
@@ -165,7 +169,7 @@ namespace VoiceMagic
         async Task StartAsync()
         {
             RefreshDevices();
-            if (!Ready) { OpenSettings(); return; }
+            if (!Ready) { if (!startupPending) OpenSettings(); return; }
             busy = true; status = "正在连接"; ErrorDetail = ""; Publish();
             Exception failure = null;
             try
@@ -182,6 +186,7 @@ namespace VoiceMagic
                     watcherStarted = true;
                 }
                 report = await Task.Run(delegate { return Routing.Apply(cableInput); }); Save();
+                startupPending = false;
             }
             catch (Exception ex) { failure = ex; }
             try
@@ -195,6 +200,7 @@ namespace VoiceMagic
         public async Task<bool> StopAsync(bool forceRestore)
         {
             if (busy) return false;
+            startupPending = false;
             busy = true; status = "正在停止"; Publish();
             try
             {
@@ -211,6 +217,10 @@ namespace VoiceMagic
             if (exitRequested && !busy) { await ExitAsync(); return; }
             if (savePending && unchecked(Environment.TickCount - gainChangedAt) >= 500) Save();
             Publish();
+            if (startupPending && !Running && !busy && ++startupTicks >= 40)
+            {
+                startupTicks = 0; RefreshDevices(); if (Ready) await StartAsync(); return;
+            }
             if (!Running || busy || ++ticks % 8 != 0) return;
             busy = true;
             Exception failure = null;

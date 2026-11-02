@@ -10,6 +10,7 @@ namespace VoiceMagic
     {
         readonly VoiceMagicContext context;
         readonly ComboBox outputs = new ComboBox();
+        readonly CheckBox startup = new CheckBox();
         readonly Label heading = new Label(), component = new Label(), note = new Label(), error = new Label();
         readonly Button refresh = new Button(), install = new Button(), restore = new Button(), windows = new Button();
         bool binding;
@@ -28,29 +29,36 @@ namespace VoiceMagic
             install.Text = "安装音频组件"; install.Click += delegate { context.InstallDriver(); };
             restore.Text = "恢复默认输出"; restore.Click += async delegate { await context.StopAsync(true); };
             windows.Text = "Windows 音量设置"; windows.Click += delegate { Process.Start(new ProcessStartInfo("ms-settings:apps-volume") { UseShellExecute = true }); };
-            note.Text = "首次安装后，按安装程序提示重启。"; note.ForeColor = UiTheme.Muted;
+            startup.Text = "开机启动"; startup.AccessibleName = "开机启动";
+            startup.CheckedChanged += delegate {
+                if (binding) return;
+                try { StartupManager.SetEnabled(startup.Checked); }
+                catch (Exception ex) { Routing.Log(ex); MessageBox.Show(this, ex.Message, "开机启动设置", MessageBoxButtons.OK, MessageBoxIcon.Warning); UpdateState(); }
+            };
+            note.Text = "登录后驻留托盘，自动开启放大。"; note.ForeColor = UiTheme.Muted;
             error.ForeColor = Color.FromArgb(161, 64, 48); error.AutoEllipsis = true;
             foreach (Button button in new[] { refresh, install, restore, windows })
             {
                 button.FlatStyle = FlatStyle.Flat; button.FlatAppearance.BorderColor = UiTheme.Border;
                 button.BackColor = Color.FromArgb(250, 250, 250); button.Cursor = Cursors.Hand;
             }
-            Controls.AddRange(new Control[] { heading, outputs, component, refresh, install, note, error, restore, windows });
+            Controls.AddRange(new Control[] { heading, outputs, component, refresh, install, startup, note, error, restore, windows });
             ApplyScale(NativeUi.ScaleAt(Cursor.Position));
             context.Changed += UpdateState; UpdateState();
         }
         void ApplyScale(float value)
         {
-            scale = value; ClientSize = new Size(P(420), P(308)); Font = UiTheme.Font(scale);
+            scale = value; ClientSize = new Size(P(420), P(360)); Font = UiTheme.Font(scale);
             heading.SetBounds(P(20), P(20), P(380), P(24));
             outputs.SetBounds(P(20), P(52), P(380), P(30));
             component.SetBounds(P(20), P(102), P(380), P(24));
             refresh.SetBounds(P(20), P(138), P(116), P(34));
             install.SetBounds(P(148), P(138), P(144), P(34));
-            note.SetBounds(P(20), P(186), P(380), P(24));
-            error.SetBounds(P(20), P(213), P(380), P(36));
-            restore.SetBounds(P(20), P(254), P(184), P(34));
-            windows.SetBounds(P(216), P(254), P(184), P(34));
+            startup.SetBounds(P(20), P(188), P(380), P(28));
+            note.SetBounds(P(20), P(220), P(380), P(24));
+            error.SetBounds(P(20), P(250), P(380), P(48));
+            restore.SetBounds(P(20), P(306), P(184), P(34));
+            windows.SetBounds(P(216), P(306), P(184), P(34));
         }
         int P(int value) { return (int)Math.Round(value * scale); }
         void UpdateState()
@@ -68,6 +76,7 @@ namespace VoiceMagic
                 outputs.Enabled = refresh.Enabled = restore.Enabled = !context.Busy;
                 install.Enabled = !context.Busy && !context.Running;
                 component.Text = context.Ready ? "音频组件已就绪" : "需要安装音频组件";
+                startup.Checked = StartupManager.Enabled;
                 error.Text = context.ErrorDetail ?? "";
             }
             finally { binding = false; }
